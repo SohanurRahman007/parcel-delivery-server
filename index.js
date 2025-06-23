@@ -108,10 +108,55 @@ async function run() {
         });
 
 
+        // POST: Record payment and update parcel status
+        app.post('/payments', async (req, res) => {
+            try {
+                const { parcelId, email, amount, paymentMethod, transactionId } = req.body;
+
+                if (!parcelId || !email || !amount) {
+                    return res.status(400).send({ message: 'parcelId, email, and amount are required' });
+                }
+
+                // 1. Update parcel's payment_status
+                const updateResult = await parcelCollection.updateOne(
+                    { _id: new ObjectId(parcelId) },
+                    { $set: { payment_status: 'paid' } }
+                );
+
+                if (updateResult.modifiedCount === 0) {
+                    return res.status(404).send({ message: 'Parcel not found or already paid' });
+                }
+
+                // 2. Insert payment record
+                const paymentDoc = {
+                    parcelId,
+                    email,
+                    amount,
+                    paymentMethod,
+                    transactionId,
+                    paidAt: new Date(),
+                };
+
+                const paymentResult = await paymentsCollection.insertOne(paymentDoc);
+
+                res.status(201).send({
+                    message: 'Payment recorded and parcel marked as paid',
+                    insertedId: paymentResult.insertedId,
+                });
+
+            } catch (error) {
+                console.error('Payment processing failed:', error);
+                res.status(500).send({ message: 'Failed to record payment' });
+            }
+        });
+
+
+
         app.post('/create-payment-intent', async (req, res) => {
+            const amountInCents = req.body.amountInCents
             try {
                 const paymentIntent = await stripe.paymentIntents.create({
-                    amount: 1000, // Amount in cents
+                    amount: amountInCents, // Amount in cents
                     currency: 'usd',
                     payment_method_types: ['card'],
                 });
