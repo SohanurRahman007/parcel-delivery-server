@@ -59,6 +59,24 @@ async function run() {
             }
         });
 
+        // GET: Get a specific parcel by ID
+        app.get('/parcels/:id', async (req, res) => {
+            try {
+                const id = req.params.id;
+
+                const parcel = await parcelCollection.findOne({ _id: new ObjectId(id) });
+
+                if (!parcel) {
+                    return res.status(404).send({ message: 'Parcel not found' });
+                }
+
+                res.send(parcel);
+            } catch (error) {
+                console.error('Error fetching parcel:', error);
+                res.status(500).send({ message: 'Failed to fetch parcel' });
+            }
+        });
+
 
         // POST: Create a new parcel
         app.post('/parcels', async (req, res) => {
