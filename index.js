@@ -3,8 +3,11 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
+
 // Load environment variables from .env file
 dotenv.config();
+
+const stripe = require('stripe')(process.env.PAYMENT_GATEWAY_KEY);
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -101,6 +104,21 @@ async function run() {
             } catch (error) {
                 console.error('Error deleting parcel:', error);
                 res.status(500).send({ message: 'Failed to delete parcel' });
+            }
+        });
+
+
+        app.post('/create-payment-intent', async (req, res) => {
+            try {
+                const paymentIntent = await stripe.paymentIntents.create({
+                    amount: 1000, // Amount in cents
+                    currency: 'usd',
+                    payment_method_types: ['card'],
+                });
+
+                res.json({ clientSecret: paymentIntent.client_secret });
+            } catch (error) {
+                res.status(500).json({ error: error.message });
             }
         });
 
