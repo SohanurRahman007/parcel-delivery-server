@@ -34,12 +34,24 @@ async function run() {
     await client.connect();
 
     const db = client.db("parcelDB"); // database name
+    const usersCollection = db.collection("users");
     const parcelCollection = db.collection("parcels");
     const paymentsCollection = db.collection("payments");
 
-    app.get("/parcels", async (req, res) => {
-      const parcels = await parcelCollection.find().toArray();
-      res.send(parcels);
+    // custom middleware
+    const verifyFBToken = async (req, res, next) => {
+      console.log("middle in token", req.headers);
+    };
+
+    app.post("/users", async (req, res) => {
+      const email = req.body.email;
+      const userExists = await usersCollection.findOne({ email });
+      if (userExists) {
+        return res.status(200).send({ message: "User already exists" });
+      }
+      const user = req.body;
+      const result = await usersCollection.insertOne(user);
+      res.send(result);
     });
 
     // parcels api
@@ -131,7 +143,7 @@ async function run() {
       res.send({ success: true, insertedId: result.insertedId });
     });
 
-    app.get("/payments", async (req, res) => {
+    app.get("/payments", verifyFBToken, async (req, res) => {
       try {
         const userEmail = req.query.email;
 
